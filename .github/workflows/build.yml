@@ -1,0 +1,82 @@
+name: Build and sign
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-sign:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+    steps:
+      -
+        uses: oprypin/find-latest-tag@e6d7a96b985a7dda6080e43e12771ad3a90fd389 # v1.1.0
+        with:
+          repository: rancher/kubectl
+          releases-only: true # only those tags with a GH release
+        id: rancher-kubectl
+      -
+        run: echo "rancher/kubectl is at version ${{ steps.rancher-kubectl.outputs.tag }}"
+      -
+        name: Stop if ${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} in repo already
+        run: |
+          # fake no-op token, image is public
+          TOKEN=$(curl https://ghcr.io/token\?scope\="repository:${{ github.repository_owner }}/kubectl:pull" | jq .token | tr -d \")
+          if curl -H "Authorization: Bearer $TOKEN" https://ghcr.io/v2/${{ github.repository_owner }}/kubectl/tags/list \
+               | grep ${{ steps.rancher-kubectl.outputs.tag }};
+          then
+              echo "${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} is in repo already"
+              exit 1
+          fi
+      -
+        uses: actions/checkout@v2
+        with:
+          repository: rancher/kubectl
+          ref: ${{ steps.rancher-kubectl.outputs.tag }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - 
+        name: Build and push tagged container image for amd64
+        id: build-tag-amd64
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            KUBERNETES_RELEASE=${{ steps.rancher-kubectl.outputs.tag }}
+            ARCH=amd64
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}
+      -
+        name: Build and push tagged container image for arm64
+        id: build-tag-arm64
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            KUBERNETES_RELEASE=${{ steps.rancher-kubectl.outputs.tag }}
+            ARCH=arm64
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}
+      - 
+        uses: sigstore/cosign-installer@main
+      -
+        name: Sign the images for releases
+        run: |
+          cosign sign \
+            ghcr.io/${{ github.repository_owner }}/kubectl@${{ steps.build-tag-amd64.outputs.digest }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
