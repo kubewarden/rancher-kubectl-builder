@@ -21,6 +21,7 @@ jobs:
         run: echo "rancher/kubectl is at version ${{ steps.rancher-kubectl.outputs.tag }}"
       -
         name: Stop if ${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} in repo already
+        id: check-in-repo
         run: |
           # fake no-op token, image is public
           TOKEN=$(curl https://ghcr.io/token\?scope\="repository:${{ github.repository_owner }}/kubectl:pull" | jq .token | tr -d \")
@@ -28,18 +29,21 @@ jobs:
                | grep ${{ steps.rancher-kubectl.outputs.tag }};
           then
               echo "${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} is in repo already"
-              exit 1
+              echo "image-exists=true" >> $GITHUB_ENV
           fi
       -
         uses: actions/checkout@v2
+        if: env.image-exists != 'true'
         with:
           repository: rancher/kubectl
           ref: ${{ steps.rancher-kubectl.outputs.tag }}
       -
         name: Set up Docker Buildx
+        if: env.image-exists != 'true'
         uses: docker/setup-buildx-action@v1
       -
         name: Login to GitHub Container Registry
+        if: env.image-exists != 'true'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
@@ -47,7 +51,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - 
         name: Build and push tagged container image for amd64
-        id: build-tag-amd64
+        if: env.image-exists != 'true'
         uses: docker/build-push-action@v2
         with:
           build-args: |
@@ -57,10 +61,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}-amd64
       -
         name: Build and push tagged container image for arm64
-        id: build-tag-arm64
+        if: env.image-exists != 'true'
         uses: docker/build-push-action@v2
         with:
           build-args: |
@@ -70,13 +74,27 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}
-      - 
+            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}-arm64
+      -
+        name: Create final multiarch tag
+        id: build-final-tag
+        if: env.image-exists != 'true'
+        run: |
+          docker manifest create \
+            ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} \
+            --amend ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}-amd64 \
+            --amend ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }}-arm64
+
+          DIGEST=$(docker manifest push ghcr.io/${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }})
+          echo "digest=$DIGEST" >> $GITHUB_ENV
+      -
         uses: sigstore/cosign-installer@main
+        if: env.image-exists != 'true'
       -
         name: Sign the images for releases
+        if: env.image-exists != 'true'
         run: |
           cosign sign \
-            ghcr.io/${{ github.repository_owner }}/kubectl@${{ steps.build-tag-amd64.outputs.digest }}
+            ghcr.io/${{ github.repository_owner }}/kubectl@${{ env.digest }}
         env:
           COSIGN_EXPERIMENTAL: 1
