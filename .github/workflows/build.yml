@@ -26,7 +26,7 @@ jobs:
           # fake no-op token, image is public
           TOKEN=$(curl https://ghcr.io/token\?scope\="repository:${{ github.repository_owner }}/kubectl:pull" | jq .token | tr -d \")
           if curl -H "Authorization: Bearer $TOKEN" https://ghcr.io/v2/${{ github.repository_owner }}/kubectl/tags/list \
-               | grep ${{ steps.rancher-kubectl.outputs.tag }};
+               | grep \"${{ steps.rancher-kubectl.outputs.tag }}\";
           then
               echo "${{ github.repository_owner }}/kubectl:${{ steps.rancher-kubectl.outputs.tag }} is in repo already"
               echo "image-exists=true" >> $GITHUB_ENV
