@@ -32,7 +32,7 @@ jobs:
               echo "image-exists=true" >> $GITHUB_ENV
           fi
       -
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: env.image-exists != 'true'
         with:
           repository: rancher/kubectl
