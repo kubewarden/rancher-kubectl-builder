@@ -40,9 +40,7 @@ jobs:
       -
         name: Download and verify kubectl
         if: env.image-exists != 'true'
-        run: ./download-kubectl.sh
-        env:
-          KUBECTL_VER: ${{ env.kubectl_ver }}
+        run: ./download-kubectl.sh ${{ env.kubectl_ver }}
       -
         name: Set up QEMU
         if: env.image-exists != 'true'
