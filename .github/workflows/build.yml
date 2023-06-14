@@ -36,7 +36,7 @@ jobs:
       -
         name: Checkout code
         if: env.image-exists != 'true'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       -
         name: Download and verify kubectl
         if: env.image-exists != 'true'
