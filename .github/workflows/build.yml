@@ -31,7 +31,7 @@ jobs:
               echo "image-exists=true" >> $GITHUB_ENV
           fi
       -
-        uses: sigstore/cosign-installer@v2.8.1
+        uses: sigstore/cosign-installer@v3.1.1
         if: env.image-exists != 'true'
       -
         name: Checkout code
