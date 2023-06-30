@@ -11,6 +11,8 @@ do
     curl -sSfL https://dl.k8s.io/release/"${1?required}"/bin/linux/"${ARCH}"/kubectl -o kubectl
     curl -sSfL https://dl.k8s.io/release/"${1?required}"/bin/linux/"${ARCH}"/kubectl.sig -o kubectl.sig
     curl -sSfL https://dl.k8s.io/release/"${1?required}"/bin/linux/"${ARCH}"/kubectl.cert -o kubectl.cert
-    COSIGN_EXPERIMENTAL=1 cosign verify-blob kubectl --signature kubectl.sig --certificate kubectl.cert
+    cosign verify-blob --signature kubectl.sig --certificate kubectl.cert kubectl \
+        --certificate-identity krel-staging@k8s-releng-prod.iam.gserviceaccount.com \
+        --certificate-oidc-issuer https://accounts.google.com
     popd
 done

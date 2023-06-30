@@ -6,6 +6,7 @@ on:
 
 jobs:
   build-and-sign:
+    name: "Build and sign kubectl"
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -31,7 +32,7 @@ jobs:
               echo "image-exists=true" >> $GITHUB_ENV
           fi
       -
-        uses: sigstore/cosign-installer@v2.8.1
+        uses: sigstore/cosign-installer@v3
         if: env.image-exists != 'true'
       -
         name: Checkout code
@@ -74,7 +75,5 @@ jobs:
         name: Sign the image
         if: env.image-exists != 'true'
         run: |
-          cosign sign \
+          cosign sign --yes \
             ghcr.io/${{ github.repository_owner }}/kubectl@${{ steps.build-image.outputs.digest }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
