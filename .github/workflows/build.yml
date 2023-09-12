@@ -51,7 +51,7 @@ jobs:
       -
         name: Set up Docker Buildx
         if: env.image-exists != 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       -
         name: Login to GitHub Container Registry
         if: env.image-exists != 'true'
