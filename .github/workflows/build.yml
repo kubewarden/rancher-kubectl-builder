@@ -38,7 +38,7 @@ jobs:
         run: ./download-kubectl.sh ${{ env.kubectl_ver }}
       - name: Set up QEMU
         if: env.image-exists != 'true'
-        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        uses: docker/setup-qemu-action@5927c834f5b4fdf503fca6f4c7eccda82949e1ee # v3.1.0
         with:
           platforms: "arm64"
       - name: Set up Docker Buildx
