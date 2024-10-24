@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Find latest kubectl version
         run: |
-          KUBECTL_VER="$(curl https://storage.googleapis.com/kubernetes-release/release/stable-1.30.txt)"
+          KUBECTL_VER="$(curl https://storage.googleapis.com/kubernetes-release/release/stable-1.31.txt)"
           echo "kubectl_ver=${KUBECTL_VER}" >> $GITHUB_ENV
       - run: echo "kubectl binary is at version ${{ env.kubectl_ver }}"
       - name: Stop if ${{ github.repository_owner }}/kubectl:${{ env.kubectl_ver }} in repo already
